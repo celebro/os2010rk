@@ -57,9 +57,6 @@
 #define RDID1 0xDA // read ID1
 #define RDID2 0xDB // read ID2
 #define RDID3 0xDC // read ID3
-// backlight control
-#define BKLGHT_LCD_ON 1
-#define BKLGHT_LCD_OFF 2
 // Booleans
 #define NOFILL 0
 #define FILL 1
@@ -79,10 +76,6 @@
 #define SMALL 0
 #define MEDIUM 1
 #define LARGE 2
-// hardware definitions
-#define SPI_SR_TXEMPTY
-#define LCD_RESET_LOW pPIOA->PIO_CODR = BIT2
-#define LCD_RESET_HIGH pPIOA->PIO_SODR = BIT2
 // mask definitions
 #define BIT0 0x00000001
 #define BIT1 0x00000002
