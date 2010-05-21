@@ -60,6 +60,9 @@ void WriteToFile(struct display* display) {
 }
 
 inline void WriteSpiCommand(volatile unsigned char command, struct display* display){
+	if (display->tx_index > (TX_MAX-2)) {
+		WriteToFile(display);
+	}
 	display->tx_data[display->tx_index++] = 0;
 	display->tx_data[display->tx_index++] = command;
 }
@@ -87,7 +90,7 @@ void LCDSetPixel(int x, int y, int color, struct display* display){
 	WriteSpiCommand(NOP, display);
 }
 
-void LCDSetRectangle(int x0, int y0, int x1, int y1, int color, struct display* display) {
+void LCDSetRectangle(int x0, int y0, int x1, int y1, unsigned char fill, int color, struct display* display) {
 	int xmin, xmax, ymin, ymax;
 	int i;
 	// best way to create a filled rectangle is to define a drawing box
