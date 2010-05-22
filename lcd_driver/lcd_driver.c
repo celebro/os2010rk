@@ -1,6 +1,7 @@
 #include "lcd_driver.h"
 #include "lcd_ioctl.h"
 #include "lcd_protocol.h"
+#include "font.h"
 
 #include "at91sam9260.h"
 #include "epson.h"
@@ -16,6 +17,7 @@ volatile AT91PS_PMC		pPMC;
 /* For the device, we will create */
 static struct char_device *lcd_dev;
 static unsigned char *buf;
+static char str[LCD_MAX_STR_LEN];
 
 /* File operations for that device */
 static struct file_operations lcd_fops = {
@@ -181,6 +183,7 @@ static ssize_t lcd_read(struct file *file, char *buffer, size_t length, loff_t *
 static ssize_t lcd_write(struct file *file, const char __user *buffer, size_t length, loff_t *offset) {
 	int type;
 	struct lcd_func_params param;
+	int str_len;
 
 	printk(KERN_ALERT PREFIX "Write.\n");
 
@@ -191,14 +194,15 @@ static ssize_t lcd_write(struct file *file, const char __user *buffer, size_t le
 	printk(KERN_ALERT PREFIX "Type - %d.\n", type);
 
 	switch (type) {
+
 		case LCD_SET_RECT:
 			printk(KERN_ALERT PREFIX "Set rect.\n");
 			if (length-1 >= sizeof(struct lcd_func_params)) {
 				copy_from_user(&param, buffer+1, sizeof(struct lcd_func_params));
-//				printk(KERN_ALERT PREFIX "x1: %d, y1: %d, x2:%d, y2: %d; fill: %d, color: %d\n",param.x1, param.y1, param.x2, param.y2, param.fill, RED);
 				lcd_set_rect(param.x1, param.y1, param.x2, param.y2, param.fill, param.color);
 			}
 			break;
+
 		case LCD_SET_LINE:
 			printk(KERN_ALERT PREFIX "Set line.\n");
 			if (length-1 >= sizeof(struct lcd_func_params)) {
@@ -206,7 +210,20 @@ static ssize_t lcd_write(struct file *file, const char __user *buffer, size_t le
 				lcd_set_line(param.x1, param.y1, param.x2, param.y2, param.color);
 			}
 			break;
+
+		case LCD_PUT_STR:
+			printk(KERN_ALERT PREFIX "Put string.\n");
+			if (length-1 >= sizeof(struct lcd_func_params)) {
+				copy_from_user(&param, buffer+1, sizeof(struct lcd_func_params));
+				str_len = length - 1 - sizeof(struct lcd_func_params);
+				if (str_len > param.t_len)
+					str_len = param.t_len;
+				copy_from_user(&str, buffer+1+sizeof(struct lcd_func_params), param.t_len);
+				str[LCD_MAX_STR_LEN-1] = '\n';
+				lcd_put_str(str, param.x1, param.y1, param.t_size, param.color, BLACK);
+			}
 			break;
+
 		case '0': lcd_set_rect(2, 0, 131, 129, FILL, WHITE); break;
 		case '1': lcd_set_rect(2, 0, 131, 129, FILL, BLACK); break;
 		case '2': lcd_set_rect(2, 0, 131, 129, FILL, RED); break;
@@ -216,7 +233,14 @@ static ssize_t lcd_write(struct file *file, const char __user *buffer, size_t le
 		case '6': lcd_set_rect(2, 0, 131, 129, FILL, BROWN); break;
 		case '7': lcd_set_rect(2, 0, 131, 129, FILL, ORANGE); break;
 		case '8': lcd_set_rect(2, 0, 131, 129, FILL, PINK); break;
-		case '9': lcd_set_line(2, 0, 100, 100, YELLOW); break;
+		case '9':
+			lcd_put_char('E', 10, 10, 0, RED, GREEN);
+			lcd_put_char('B', 10, 20, 0, RED, GREEN);
+			lcd_put_char('M', 10, 30, 0, RED, GREEN);
+			//lcd_put_str("Test string\n", 30, 10, SMALL, YELLOW, BLACK);
+			//lcd_put_str("Test string\n", 45, 10, MEDIUM, YELLOW, BLACK);
+			//lcd_put_str("Test string\n", 60, 10, LARGE, YELLOW, BLACK);
+			break;
 
 	}
 
@@ -696,4 +720,93 @@ static void lcd_set_line (int x0, int y0, int x1, int y1, int color) {
 			lcd_set_pixel(x0, y0, color);
 		}
 	}
+}
+
+static void lcd_put_char(char c, int x, int y, int size, int fColor, int bColor) {
+	//extern const unsigned char FONT6x8[97][8];
+	//extern const unsigned char FONT8x8[97][8];
+	//extern const unsigned char FONT8x16[97][16];
+	int i, j;
+	unsigned int nCols;
+	unsigned int nRows;
+	unsigned int nBytes;
+	unsigned char PixelRow;
+	unsigned char Mask;
+	unsigned int Word0;
+	unsigned int Word1;
+	unsigned char *pFont;
+	unsigned char *pChar;
+	unsigned char *FontTable[] = { (unsigned char *) FONT6x8,
+			(unsigned char *) FONT8x8, (unsigned char *) FONT8x16 };
+
+	// get pointer to the beginning of the selected font table
+	pFont = (unsigned char *) FontTable[size];
+	//pFont = (unsigned char *) FONT6x8;
+	// get the nColumns, nRows and nBytes
+	nCols = *pFont;
+	nRows = *(pFont + 1);
+	nBytes = *(pFont + 2);
+	// get pointer to the last byte of the desired character
+	///pChar = pFont + (nBytes * (c - 0x1F)) + nBytes - 1;
+	pChar = pFont + (nBytes * (c - 0x1F));
+	// Row address set (command 0x2B)
+	write_spi_command(PASET);
+	write_spi_data(x);
+	write_spi_data(x + nRows - 1);
+	// Column address set (command 0x2A)
+	write_spi_command(CASET);
+	write_spi_data(y);
+	write_spi_data(y + nCols - 1);
+	// WRITE MEMORY
+	write_spi_command(RAMWR);
+	// loop on each row, working backwards from the bottom to the top
+	//for (i = nRows - 1; i >= 0; i--) {
+	for (i = 0; i < nRows; i++) {
+		// copy pixel row from font table and then decrement row
+		PixelRow = *pChar++;
+		// loop on each pixel in the row (left to right)
+		// Note: we do two pixels each loop
+		Mask = 0x80;
+		//Mask = 0x01;
+		for (j = 0; j < nCols; j += 2) {
+		//for (j = nCols-1; j >= 0; j -= 2) {
+			// if pixel bit set, use foreground color; else use the background color
+			// now get the pixel color for two successive pixels
+			if ((PixelRow & Mask) == 0)
+				Word0 = bColor;
+			else
+				Word0 = fColor;
+			Mask = Mask >> 1;
+			//Mask = Mask << 1;
+			if ((PixelRow & Mask) == 0)
+				Word1 = bColor;
+			else
+				Word1 = fColor;
+			Mask = Mask >> 1;
+			//Mask = Mask << 1;
+			// use this information to output three data bytes
+			write_spi_data((Word0 >> 4) & 0xFF);
+			write_spi_data(((Word0 & 0xF) << 4) | ((Word1 >> 8) & 0xF));
+			write_spi_data(Word1 & 0xFF);
+		}
+	}
+	// terminate the Write Memory command
+	write_spi_command(NOP);
+}
+
+static void lcd_put_str(char *pString, int x, int y, int Size, int fColor, int bColor) {
+         // loop until null-terminator is seen
+         while (*pString != '\n') {
+                  // draw the character
+                  lcd_put_char(*pString++, x, y, Size, fColor, bColor);
+                  // advance the y position
+                  if (Size == SMALL)
+                           y = y + 6;
+                  else if (Size == MEDIUM)
+                           y = y + 8;
+                  else
+                           y = y + 8;
+                  // bail out if y exceeds 131
+                  if (y > 131) break;
+         }
 }

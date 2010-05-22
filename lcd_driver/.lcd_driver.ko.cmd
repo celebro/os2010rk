@@ -1,0 +1,1 @@
+cmd_/home/celebro/celebro/programming/c/lcd_driver/lcd_driver.ko := arm-linux-ld -EL -r   --build-id -o /home/celebro/celebro/programming/c/lcd_driver/lcd_driver.ko /home/celebro/celebro/programming/c/lcd_driver/lcd_driver.o /home/celebro/celebro/programming/c/lcd_driver/lcd_driver.mod.o
