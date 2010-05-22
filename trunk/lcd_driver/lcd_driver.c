@@ -647,33 +647,40 @@ static void lcd_set_pixel(int x, int y, int color) {
 
 static void lcd_set_rect(int x0, int y0, int x1, int y1, int fill, int color) {
 	int      xmin, xmax, ymin, ymax;
-	int               i;
-	// best way to create a filled rectangle is to define a drawing box
-	// and loop two pixels at a time
-	// calculate the min and max for x and y directions
-	xmin = (x0 <= x1) ? x0 : x1;
-	xmax = (x0 > x1) ? x0 : x1;
-	ymin = (y0 <= y1) ? y0 : y1;
-	ymax = (y0 > y1) ? y0 : y1;
-	// specify the controller drawing box according to those limits
-	// Row address set (command 0x2B)
-	write_spi_command(PASET);
-	write_spi_data(xmin);
-	write_spi_data(xmax);
-	// Column address set (command 0x2A)
-	write_spi_command(CASET);
-	write_spi_data(ymin);
-	write_spi_data(ymax);
-	// WRITE MEMORY
-	write_spi_command(RAMWR);
-	// loop on total number of pixels / 2
-	for (i = 0; i < ((((xmax - xmin + 1) * (ymax - ymin + 1)) / 2)+1); i++) {
-		   // use the color value to output three data bytes covering two pixels
-		   write_spi_data((color >> 4) & 0xFF);
-		   write_spi_data(((color & 0xF) << 4) | ((color >> 8) & 0xF));
-		   write_spi_data(color & 0xFF);
+	int  i;
+	if (fill == FILL) {
+		// best way to create a filled rectangle is to define a drawing box
+		// and loop two pixels at a time
+		// calculate the min and max for x and y directions
+		xmin = (x0 <= x1) ? x0 : x1;
+		xmax = (x0 > x1) ? x0 : x1;
+		ymin = (y0 <= y1) ? y0 : y1;
+		ymax = (y0 > y1) ? y0 : y1;
+		// specify the controller drawing box according to those limits
+		// Row address set (command 0x2B)
+		write_spi_command(PASET);
+		write_spi_data(xmin);
+		write_spi_data(xmax);
+		// Column address set (command 0x2A)
+		write_spi_command(CASET);
+		write_spi_data(ymin);
+		write_spi_data(ymax);
+		// WRITE MEMORY
+		write_spi_command(RAMWR);
+		// loop on total number of pixels / 2
+		for (i = 0; i < ((((xmax - xmin + 1) * (ymax - ymin + 1)) / 2)+1); i++) {
+			   // use the color value to output three data bytes covering two pixels
+			   write_spi_data((color >> 4) & 0xFF);
+			   write_spi_data(((color & 0xF) << 4) | ((color >> 8) & 0xF));
+			   write_spi_data(color & 0xFF);
+		}
 	}
-
+	else {
+        lcd_set_line(x0, y0, x1,  y0, color);
+        lcd_set_line(x0, y1, x1,  y1, color);
+        lcd_set_line(x0, y0, x0,  y1, color);
+        lcd_set_line(x1, y0, x1,  y1, color);
+	}
 
 	write_spi_command(NOP);
 }
