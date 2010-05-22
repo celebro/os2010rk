@@ -55,6 +55,10 @@
 #define BROWN          0xB22
 #define ORANGE         0xFA0
 #define PINK           0xF6A
+// Font sizes
+#define SMALL          0
+#define MEDIUM         1
+#define LARGE          2
 
 #define FILL	1
 #define NOFILL	0

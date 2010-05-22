@@ -24,6 +24,7 @@ void write_to_file(struct display *display);
 void lcd_set_pixel(int x, int y, int color, struct display* display);
 void lcd_set_rect(int x1, int y1, int x2, int y2, unsigned char fill, int color, struct display*);
 void lcd_set_line(int x1, int y1, int x2, int y2, int color, struct display*);
+void lcd_put_str(char *str, int x, int y, int size, int color, struct display *display);
 
 
 
