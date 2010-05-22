@@ -111,4 +111,36 @@ void lcd_set_line(int x1, int y1, int x2, int y2, int color, struct display* dis
 	write_to_file(display);
 }
 
+void lcd_put_str(char *str, int x, int y, int size, int color, struct display *display) {
+	struct lcd_func_params param;
+	int length;
+
+	param.x1 = x;
+	param.y1 = y;
+	param.color = color;
+
+	/* Max LCD_MAX_STR_LEN characters */
+	length = strlen(str);
+
+	if (length > LCD_MAX_STR_LEN)
+		length = LCD_MAX_STR_LEN;
+
+	param.t_len = length;
+	param.t_size = size;
+
+	/* Set data type */
+	display->tx_data[display->tx_index++] = LCD_PUT_STR;
+
+	/* Copy parameters */
+	memcpy(&(display->tx_data[display->tx_index]), &param, sizeof(struct lcd_func_params));
+	display->tx_index += sizeof(struct lcd_func_params);
+
+	/* Copy string */
+	memcpy(&(display->tx_data[display->tx_index]), str, length);
+	display->tx_index += length+1;
+	display->tx_data[display->tx_index] = '\n';
+
+	write_to_file(display);
+}
+
 

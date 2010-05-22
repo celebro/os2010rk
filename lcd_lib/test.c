@@ -35,11 +35,18 @@ int main(){
 //	printf("Lcd pixel\n");
 //	lcd_set_pixel(100, 100, WHITE, display);
 
-	lcd_set_line(2,0, 20, 78, RED, display);
+//	lcd_set_line(2,0, 20, 78, RED, display);
+//	getc(stdin);
+//	lcd_set_line(30,19, 98, 34, BLUE, display);
+//	getc(stdin);
+//	lcd_set_line(130,129, 20, 60, GREEN, display);
+
+	lcd_put_str("Test str 1\n", 10, 10, SMALL, YELLOW, display);
 	getc(stdin);
-	lcd_set_line(30,19, 98, 34, BLUE, display);
+	lcd_put_str("Test str 1\n", 30, 10, MEDIUM, GREEN, display);
 	getc(stdin);
-	lcd_set_line(130,129, 20, 60, GREEN, display);
+	lcd_put_str("Test str 1\n", 50, 10, LARGE, ORANGE, display);
+	getc(stdin);
 
 	printf("Release display\n");
 	release_display(display);
