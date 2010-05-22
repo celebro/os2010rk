@@ -70,5 +70,7 @@ static void write_spi_data(volatile unsigned int data);
 static void lcd_set_pixel(int x, int y, int color);
 static void lcd_set_rect(int x0, int y0, int x1, int y1, int fill, int color);
 static void lcd_set_line (int x0, int y0, int x1, int y1, int color);
+static void lcd_put_char (char c, int x, int y, int size, int fColor, int bColor);
+static void lcd_put_str(char *pString, int x, int y, int Size, int fColor, int bColor);
 
 #endif /* LCD_DRIVER_H_ */

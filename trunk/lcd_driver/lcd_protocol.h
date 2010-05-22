@@ -6,8 +6,11 @@
 #ifndef LCD_PROTOCOL_H_
 #define LCD_PROTOCOL_H_
 
+#define LCD_MAX_STR_LEN 	25
+
 #define LCD_SET_RECT	10
 #define LCD_SET_LINE	11
+#define LCD_PUT_STR		12
 
 struct lcd_func_params {
 	int x1;
@@ -16,6 +19,8 @@ struct lcd_func_params {
 	int y2;
 	int fill;
 	int color;
+	int t_len;
+	int t_size;
 };
 
 
