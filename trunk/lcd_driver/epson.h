@@ -56,6 +56,8 @@
 #define ORANGE         0xFA0
 #define PINK           0xF6A
 
+#define FILL	1
+#define NOFILL	0
 // mask definitions
 #define    BIT0        0x00000001
 #define    BIT1        0x00000002

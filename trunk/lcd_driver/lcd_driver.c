@@ -1,5 +1,7 @@
 #include "lcd_driver.h"
 #include "lcd_ioctl.h"
+#include "lcd_protocol.h"
+
 #include "at91sam9260.h"
 #include "epson.h"
 
@@ -13,6 +15,7 @@ volatile AT91PS_PMC		pPMC;
 
 /* For the device, we will create */
 static struct char_device *lcd_dev;
+static unsigned char *buf;
 
 /* File operations for that device */
 static struct file_operations lcd_fops = {
@@ -71,6 +74,12 @@ static int __init lcd_driver_init (void) {
 		return -1;
 	}
 
+	buf = kmalloc(sizeof(unsigned char)*BUF_SIZE, GFP_KERNEL);
+	if (buf == NULL) {
+		printk(KERN_ALERT PREFIX "Failed allocate memmory for buffer.\n");
+		return -1;
+	}
+
 	printk(KERN_ALERT PREFIX "Module loaded v09.\n");
 
 	return 0;
@@ -86,6 +95,8 @@ static void __exit lcd_driver_exit (void) {
 	iounmap(pSPI);
 	iounmap(pPMC);
 
+	kfree(buf);
+
 	printk(KERN_ALERT PREFIX "Module unloaded.\n");
 }
 
@@ -100,7 +111,7 @@ static struct char_device* char_device_create(char *name, struct file_operations
 	int major;
 	dev_t dev = 0;
 
-	if (!device) {
+	if (device == NULL) {
 		printk(KERN_ALERT PREFIX "Failed allocate memmory for device.\n");
 		return NULL;
 	}
@@ -167,61 +178,120 @@ static ssize_t lcd_read(struct file *file, char *buffer, size_t length, loff_t *
 	return 0;
 }
 
-static ssize_t lcd_write(struct file *file, const char *buffer, size_t length, loff_t *offset) {
-	char type;
-	char data;
-	int i;
+static ssize_t lcd_write(struct file *file, const char __user *buffer, size_t length, loff_t *offset) {
+	int type;
+	struct lcd_func_params param;
 
 	printk(KERN_ALERT PREFIX "Write.\n");
 
-	if (length % 2 == 1)
-		length--;
+	if (length == 0)
+		return 0;
 
-	for (i = 0; i < length; i++) {
-		get_user(type, buffer+i);
-		i++;
-		get_user(data,buffer+i);
+	get_user(type, buffer);
+	printk(KERN_ALERT PREFIX "Type - %d.\n", type);
 
-		if (type == 1)
-			write_spi_data(data);
-		else if (type == 0) {
-			if ((data == PASET) || (data == CASET) || (data == RAMWR)) {
-				write_spi_command(data);
+	switch (type) {
+		case LCD_SET_RECT:
+			printk(KERN_ALERT PREFIX "Set rect.\n");
+			if (length-1 >= sizeof(struct lcd_func_params)) {
+				copy_from_user(&param, buffer+1, sizeof(struct lcd_func_params));
+//				printk(KERN_ALERT PREFIX "x1: %d, y1: %d, x2:%d, y2: %d; fill: %d, color: %d\n",param.x1, param.y1, param.x2, param.y2, param.fill, RED);
+				lcd_set_rect(param.x1, param.y1, param.x2, param.y2, param.fill, param.color);
 			}
-		}
+			break;
+		case LCD_SET_LINE:
+			printk(KERN_ALERT PREFIX "Set line.\n");
+			if (length-1 >= sizeof(struct lcd_func_params)) {
+				copy_from_user(&param, buffer+1, sizeof(struct lcd_func_params));
+				lcd_set_line(param.x1, param.y1, param.x2, param.y2, param.color);
+			}
+			break;
+			break;
+		case '0': lcd_set_rect(2, 0, 131, 129, FILL, WHITE); break;
+		case '1': lcd_set_rect(2, 0, 131, 129, FILL, BLACK); break;
+		case '2': lcd_set_rect(2, 0, 131, 129, FILL, RED); break;
+		case '3': lcd_set_rect(2, 0, 131, 129, FILL, GREEN); break;
+		case '4': lcd_set_rect(2, 0, 131, 129, FILL, BLUE); break;
+		case '5': lcd_set_rect(2, 0, 131, 129, FILL, CYAN); break;
+		case '6': lcd_set_rect(2, 0, 131, 129, FILL, BROWN); break;
+		case '7': lcd_set_rect(2, 0, 131, 129, FILL, ORANGE); break;
+		case '8': lcd_set_rect(2, 0, 131, 129, FILL, PINK); break;
+		case '9': lcd_set_line(2, 0, 100, 100, YELLOW); break;
+
 	}
 
 	return length;
 
+//	char type = 0;
+//	char data = 0;
+//	int i;
+//
+//	printk(KERN_ALERT PREFIX "Write, length=%d.\n",length);
+//
+//	if (length > BUF_SIZE) {
+//		length = BUF_SIZE;
+//	}
+//
+//	if (length % 2 == 1)
+//		length--;
+//
+//	if (copy_from_user(buf, buffer, length)) {
+//		return -EFAULT;
+//	}
+//
+//	for (i = 0; i < length; ) {
+////		get_user(type, buffer+i);
+////		i++;
+////		get_user(data,buffer+i);
+//
+//		type = buf[i++];
+//		data = buf[i++];
+//
+//		//printk(KERN_ALERT PREFIX "Type = %d; data = %d\n", type, data);
+//
+//		if (type == 1)
+//			write_spi_data(data);
+//		else if (type == 0) {
+//			if ((data == PASET) || (data == CASET) || (data == RAMWR)) {
+//				write_spi_command(data);
+//			}
+//		}
+//	}
+//
+//	return length;
+
+//	unsigned char input;
+//	int i;
+//
 //	for (i = 0; i < length; i++) {
 //		get_user(input, buffer+i);
 //		printk(KERN_ALERT PREFIX "Write: %i\n", (int)input);
 //	}
-
+//
 //	if (length > 0) {
 //		get_user(input, buffer);
 //	}
 //	else {
 //		return 0;
 //	}
-
+//
 //	switch (input) {
-//		case '0': LCDSetRect(30, 30, 100, 100, BLACK); break;
+//		case '0': LCDSetRect(2, 0, 131, 129, BLACK); break;
 //		case '1': LCDSetRect(2, 0, 131, 129, BLACK); break;
-//		case '2': LCDSetRect(30, 30, 100, 100, RED); break;
-//		case '3': LCDSetRect(30, 30, 100, 100, GREEN); break;
-//		case '4': LCDSetRect(30, 30, 100, 100, BLUE); break;
-//		case '5': LCDSetRect(30, 30, 100, 100, CYAN); break;
-//		case '6': LCDSetRect(30, 30, 100, 100, BROWN); break;
-//		case '7': LCDSetRect(30, 30, 100, 100, ORANGE); break;
-//		case '8': LCDSetRect(30, 30, 100, 100, PINK); break;
-//		case '9': LCDSetRect(30, 30, 100, 100, YELLOW); break;
+//		case '2': LCDSetRect(2, 0, 131, 129, RED); break;
+//		case '3': LCDSetRect(2, 0, 131, 129, GREEN); break;
+//		case '4': LCDSetRect(2, 0, 131, 129, BLUE); break;
+//		case '5': LCDSetRect(2, 0, 131, 129, CYAN); break;
+//		case '6': LCDSetRect(2, 0, 131, 129, BROWN); break;
+//		case '7': LCDSetRect(2, 0, 131, 129, ORANGE); break;
+//		case '8': LCDSetRect(2, 0, 131, 129, PINK); break;
+//		case '9': LCDSetRect(2, 0, 131, 129, YELLOW); break;
 //		case '0': LCDSetRect(3, 1, 20, 4, RED); break;
 //		case '1': LCDSetRect(2, 0, 20, 4, BLUE); break;
 //		case '2': LCDSetRect(3, 1, 130, 128, RED); break;
 //		case '3': LCDSetRect(2, 0, 131, 129, BLUE); break;
 //	}
-
+//
 //	return length;
 }
 
@@ -472,7 +542,7 @@ static void init_lcd(void) {
 	write_spi_data(0x02); // P3: 0x02 = Grayscale -> 16 (selects 12-bit color, type A)
 
 	// allow power supply to stabilize
-	lcd_delay(100);
+	lcd_delay(200);
 
 	/* Single color backfill */
 	write_spi_command(PASET);
@@ -486,10 +556,11 @@ static void init_lcd(void) {
 	write_spi_command(RAMWR);
 
 	for (i = 0; i < 130*130/2; i++) {
-		write_spi_data(0xFF);
-		write_spi_data(0xFF);
-		write_spi_data(0xFF);
+		write_spi_data(0x00);
+		write_spi_data(0x00);
+		write_spi_data(0x00);
 	}
+	write_spi_command(NOP);
 
 	// Turn on the display
 	write_spi_command(DISON);
@@ -532,32 +603,97 @@ static void wake_lcd() {\
 	write_spi_command(DISON);
 }
 
-static void LCDSetRect(int x0, int y0, int x1, int y1, int color) {
-         int      xmin, xmax, ymin, ymax;
-         int               i;
-		  // best way to create a filled rectangle is to define a drawing box
-		  // and loop two pixels at a time
-		  // calculate the min and max for x and y directions
-		  xmin = (x0 <= x1) ? x0 : x1;
-		  xmax = (x0 > x1) ? x0 : x1;
-		  ymin = (y0 <= y1) ? y0 : y1;
-		  ymax = (y0 > y1) ? y0 : y1;
-		  // specify the controller drawing box according to those limits
-		  // Row address set (command 0x2B)
-		  write_spi_command(PASET);
-		  write_spi_data(xmin);
-		  write_spi_data(xmax);
-		  // Column address set (command 0x2A)
-		  write_spi_command(CASET);
-		  write_spi_data(ymin);
-		  write_spi_data(ymax);
-		  // WRITE MEMORY
-		  write_spi_command(RAMWR);
-		  // loop on total number of pixels / 2
-		  for (i = 0; i < ((((xmax - xmin + 1) * (ymax - ymin + 1)) / 2)); i++) {
-				   // use the color value to output three data bytes covering two pixels
-				   write_spi_data((color >> 4) & 0xFF);
-				   write_spi_data(((color & 0xF) << 4) | ((color >> 8) & 0xF));
-				   write_spi_data(color & 0xFF);
-		  }
+static void lcd_set_pixel(int x, int y, int color) {
+	write_spi_command(PASET);
+	write_spi_data(x);
+	write_spi_data(x);
+
+	write_spi_command(CASET);
+	write_spi_data(y);
+	write_spi_data(y);
+
+	write_spi_command(RAMWR);
+
+	write_spi_data((color >> 4) & 0xFF);
+	write_spi_data(((color & 0xF) << 4) | ((color >> 8) & 0xF));
+	write_spi_data(color & 0xFF);
+
+	write_spi_command(NOP);
+}
+
+static void lcd_set_rect(int x0, int y0, int x1, int y1, int fill, int color) {
+	int      xmin, xmax, ymin, ymax;
+	int               i;
+	// best way to create a filled rectangle is to define a drawing box
+	// and loop two pixels at a time
+	// calculate the min and max for x and y directions
+	xmin = (x0 <= x1) ? x0 : x1;
+	xmax = (x0 > x1) ? x0 : x1;
+	ymin = (y0 <= y1) ? y0 : y1;
+	ymax = (y0 > y1) ? y0 : y1;
+	// specify the controller drawing box according to those limits
+	// Row address set (command 0x2B)
+	write_spi_command(PASET);
+	write_spi_data(xmin);
+	write_spi_data(xmax);
+	// Column address set (command 0x2A)
+	write_spi_command(CASET);
+	write_spi_data(ymin);
+	write_spi_data(ymax);
+	// WRITE MEMORY
+	write_spi_command(RAMWR);
+	// loop on total number of pixels / 2
+	for (i = 0; i < ((((xmax - xmin + 1) * (ymax - ymin + 1)) / 2)+1); i++) {
+		   // use the color value to output three data bytes covering two pixels
+		   write_spi_data((color >> 4) & 0xFF);
+		   write_spi_data(((color & 0xF) << 4) | ((color >> 8) & 0xF));
+		   write_spi_data(color & 0xFF);
+	}
+
+
+	write_spi_command(NOP);
+}
+
+static void lcd_set_line (int x0, int y0, int x1, int y1, int color) {
+	int dy = y1 - y0;
+	int dx = x1 - x0;
+	int stepx, stepy;
+	if (dy < 0) {
+		dy = -dy;
+		stepy = -1;
+	} else {
+		stepy = 1;
+	}
+	if (dx < 0) {
+		dx = -dx;
+		stepx = -1;
+	} else {
+		stepx = 1;
+	}
+	dy <<= 1; // dy is now 2*dy
+	dx <<= 1; // dx is now 2*dx
+	lcd_set_pixel(x0, y0, color);
+	if (dx > dy) {
+		int fraction = dy - (dx >> 1); // same as 2*dy - dx
+		while (x0 != x1) {
+			if (fraction >= 0) {
+				y0 += stepy;
+				fraction -= dx; // same as fraction -= 2*dx
+			}
+			x0 += stepx;
+			fraction += dy; // same as fraction -= 2*dy
+			lcd_set_pixel(x0, y0, color);
+		}
+	} else {
+		int fraction = dx - (dy >> 1);
+		while (y0 != y1) {
+			if (fraction >= 0) {
+				x0 += stepx;
+				fraction -= dy;
+			}
+			y0 += stepy;
+			fraction += dx;
+			lcd_set_pixel(x0, y0, color);
+		}
+	}
 }
