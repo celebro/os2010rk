@@ -12,6 +12,7 @@
 struct display* display;
 
 int main(){
+	printf("Get display\n");
 
 	display = get_display();
 
@@ -20,8 +21,27 @@ int main(){
 		return -1;
 	}
 
-	LCDSetRectangle(1,5,3,9,FILL,GREEN,display);
+	getc(stdin);
 
+//	printf("Lcd rect\n");
+//	lcd_set_rect(20, 20, 50, 50, FILL, WHITE, display);
+//	getc(stdin);
+//	lcd_set_rect(20, 60, 50, 90, FILL, RED, display);
+//	getc(stdin);
+//	lcd_set_rect(60, 20, 90, 50, FILL, BLUE, display);
+//	getc(stdin);
+//	lcd_set_rect(60, 60, 90, 90, FILL, ORANGE, display);
+
+//	printf("Lcd pixel\n");
+//	lcd_set_pixel(100, 100, WHITE, display);
+
+	lcd_set_line(2,0, 20, 78, RED, display);
+	getc(stdin);
+	lcd_set_line(30,19, 98, 34, BLUE, display);
+	getc(stdin);
+	lcd_set_line(130,129, 20, 60, GREEN, display);
+
+	printf("Release display\n");
 	release_display(display);
 }
 

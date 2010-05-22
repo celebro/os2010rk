@@ -12,17 +12,17 @@
 
 #include "display_lib.h"
 #include "lcd.h"
-
-unsigned char array[2];
+#include "lcd_protocol.h"
 
 struct display* get_display() {
-	/* Stucture to lcd dispaly, so there is nothing global */
+	/* Stucture to lcd display, so there is nothing global */
 	struct display* display = malloc(sizeof(struct display));
 	if (display == NULL) {
 		printf("Failed to allocate memmory for device struct\n");
 		return NULL;
 	}
 
+	/* File pointer to character device > DRIVER */
 	display->file = open("/dev/lcd", O_WRONLY);
 	if (display->file < 0) {
 		printf("Failed to open device /dev/lcd\n");
@@ -32,11 +32,12 @@ struct display* get_display() {
 
 	display->tx_index = 0;
 
-	// TODO memory image
+	lcd_set_rect(0,0, 130, 130, FILL, BLACK, display);
 
 	return display;
 }
 
+/* Delete display structure */
 void release_display(struct display* display) {
 	if (display) {
 		close(display->file);
@@ -44,79 +45,70 @@ void release_display(struct display* display) {
 	}
 }
 
-void WriteToFile(struct display* display) {
+void write_to_file(struct display* display) {
+	int i;
+
 	if (display == NULL) {
 		printf("ERROR: Null display pointer-> WriteInFile\n");
 		return;
 	}
 
-	if (display->tx_index < 2) {
-		printf("ERROR: Writing half command-> WriteInFile\n");
-		return;
-	}
+//	for (i = 0; i < display->tx_index; i++) {
+//		printf("%d\n", display->tx_data[i]);
+//	}
+//	printf("\n");
 
-	write(display->file, display->tx_data, display->tx_index+1);
+	/* Send local buffer to char device */
+	write(display->file, display->tx_data, display->tx_index);
+	/* Set buffer empty */
 	display->tx_index = 0;
+
+//	/* Need 9 bits per command, don't send only one byte*/
+//	if (display->tx_index < 2) {
+//		printf("ERROR: Writing half command-> WriteInFile\n");
+//		return;
+//	}
+
 }
 
-inline void WriteSpiCommand(volatile unsigned char command, struct display* display){
-	if (display->tx_index > (TX_MAX-2)) {
-		WriteToFile(display);
-	}
-	display->tx_data[display->tx_index++] = 0;
-	display->tx_data[display->tx_index++] = command;
+void lcd_set_pixel(int x, int y, int color, struct display* display) {
+	lcd_set_rect(x, y, x, y, FILL, color, display);
 }
 
-inline void WriteSpiData(volatile unsigned char data, struct display* display){
-	display->tx_data[display->tx_index++] = 1;
-	display->tx_data[display->tx_index++] = data;
+void lcd_set_rect(int x1, int y1, int x2, int y2, unsigned char fill, int color, struct display* display) {
+	struct lcd_func_params param;
+	param.x1 = x1;
+	param.y1 = y1;
+	param.x2 = x2;
+	param.y2 = y2;
+	param.fill = fill;
+	param.color = color;
+
+	/* Set data type */
+	display->tx_data[display->tx_index++] = LCD_SET_RECT;
+	/* Copy parameters */
+	memcpy(&(display->tx_data[display->tx_index]), &param, sizeof(struct lcd_func_params));
+	display->tx_index += sizeof(struct lcd_func_params);
+
+	write_to_file(display);
 }
 
-void LCDSetXY(int x, int y, struct display* display){
-	WriteSpiCommand(PASET, display);	// Row address set
-	WriteSpiData(x, display);//start
-	WriteSpiData(x, display);//finish
+void lcd_set_line(int x1, int y1, int x2, int y2, int color, struct display* display) {
+	struct lcd_func_params param;
+	param.x1 = x1;
+	param.y1 = y1;
+	param.x2 = x2;
+	param.y2 = y2;
+	param.color = color;
 
-	WriteSpiCommand(CASET, display);// Column address set
-	WriteSpiData(y, display);//start
-	WriteSpiData(y, display);//finish
+	/* Set data type */
+	display->tx_data[display->tx_index++] = LCD_SET_LINE;
+
+	/* Copy parameters */
+	memcpy(&(display->tx_data[display->tx_index]), &param, sizeof(struct lcd_func_params));
+	display->tx_index += sizeof(struct lcd_func_params);
+
+	write_to_file(display);
 }
 
-void LCDSetPixel(int x, int y, int color, struct display* display){
-	LCDSetXY(x, y, display);
-	WriteSpiCommand(RAMWR, display);// memory write
-	WriteSpiData((unsigned char)((color >> 4) & 0xFFFF), display);//8 bits of color are sent
-	WriteSpiData((unsigned char)(((color & 0x0F) << 4) | 0x00), display);//the remaining 4 are sent
-	WriteSpiCommand(NOP, display);
-}
-
-void LCDSetRectangle(int x0, int y0, int x1, int y1, unsigned char fill, int color, struct display* display) {
-	int xmin, xmax, ymin, ymax;
-	int i;
-	// best way to create a filled rectangle is to define a drawing box
-	// and loop two pixels at a time
-	// calculate the min and max for x and y directions
-	xmin = (x0 <= x1) ? x0 : x1;
-	xmax = (x0 > x1) ? x0 : x1;
-	ymin = (y0 <= y1) ? y0 : y1;
-	ymax = (y0 > y1) ? y0 : y1;
-	// specify the controller drawing box according to those limits
-	WriteSpiCommand(PASET, display);// Row address set
-	WriteSpiData(xmin, display);
-	WriteSpiData(xmax, display);
-
-	WriteSpiCommand(CASET, display);// Column address set
-	WriteSpiData(ymin, display);
-	WriteSpiData(ymax, display);
-
-	WriteSpiCommand(RAMWR, display);// WRITE MEMORY
-	// loop on total number of pixels / 2
-	// use the color value to output three data bytes covering two pixels
-	// if number of pixels is odd we lose one pixel(rounding error)-> we add +1 in formula
-	for (i = 0; i < ((((xmax - xmin + 1) * (ymax - ymin + 1)) / 2) + 1); i++) {
-		WriteSpiData((unsigned char)((color >> 4) & 0xFF), display);
-		WriteSpiData((unsigned char)(((color & 0xF) << 4) | ((color >> 8) & 0xF)), display);
-		WriteSpiData((unsigned char)(color & 0xFF), display);
-	}
-}
 
