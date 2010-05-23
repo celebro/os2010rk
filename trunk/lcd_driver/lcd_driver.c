@@ -16,7 +16,7 @@ volatile AT91PS_PMC		pPMC;
 
 /* For the device, we will create */
 static struct char_device *lcd_dev;
-static unsigned char *buf;
+//static unsigned char *buf;
 static char str[LCD_MAX_STR_LEN];
 
 /* File operations for that device */
@@ -39,6 +39,9 @@ module_param(col, uint, S_IRUGO);
 module_param(temp, uint, S_IRUGO);
 
 unsigned int image[132][132];
+unsigned int *bmp;
+int bmp_x;
+int bmp_y;
 
 
 ////TODO
@@ -78,13 +81,14 @@ static int __init lcd_driver_init (void) {
 		return -1;
 	}
 
-	buf = kmalloc(sizeof(unsigned char)*BUF_SIZE, GFP_KERNEL);
-	if (buf == NULL) {
-		printk(KERN_ALERT PREFIX "Failed allocate memmory for buffer.\n");
-		return -1;
-	}
+	bmp = NULL;
+//	buf = kmalloc(sizeof(unsigned char)*BUF_SIZE, GFP_KERNEL);
+//	if (buf == NULL) {
+//		printk(KERN_ALERT PREFIX "Failed allocate memmory for buffer.\n");
+//		return -1;
+//	}
 
-	printk(KERN_ALERT PREFIX "Module loaded v09.\n");
+	printk(KERN_ALERT PREFIX "Module loaded v10.\n");
 
 	return 0;
 }
@@ -99,7 +103,7 @@ static void __exit lcd_driver_exit (void) {
 	iounmap(pSPI);
 	iounmap(pPMC);
 
-	kfree(buf);
+	kfree(bmp);
 
 	printk(KERN_ALERT PREFIX "Module unloaded.\n");
 }
@@ -223,6 +227,36 @@ static ssize_t lcd_write(struct file *file, const char __user *buffer, size_t le
 				copy_from_user(&str, buffer+1+sizeof(struct lcd_func_params), param.t_len);
 				str[LCD_MAX_STR_LEN-1] = '\n';
 				lcd_put_str(str, param.x1+2, param.y1, param.t_size, param.color);
+			}
+			break;
+
+		case LCD_LOAD_BMP:
+			printk(KERN_ALERT PREFIX "Put bmp.\n");
+			if (length-1 >= sizeof(struct lcd_func_params)) {
+				copy_from_user(&param, buffer+1, sizeof(struct lcd_func_params));
+
+				if (bmp != NULL)
+					kfree(bmp);
+				bmp = NULL;
+				bmp = kmalloc(sizeof(unsigned int)*param.x1*param.y1, GFP_KERNEL);
+				if (bmp == NULL) {
+					printk(KERN_ALERT PREFIX "Failed to allocate bmp memmory.\n");
+					break;
+				}
+
+				copy_from_user(bmp, param.bmp, sizeof(unsigned int)*param.x1*param.y1);
+				bmp_x = param.x1;
+				bmp_y = param.y1;
+			}
+			break;
+
+		case LCD_SET_BMP:
+			printk(KERN_ALERT PREFIX "Set bmp.\n");
+			if (length-1 >= sizeof(struct lcd_func_params)) {
+				if (length-1 >= sizeof(struct lcd_func_params)) {
+					copy_from_user(&param, buffer+1, sizeof(struct lcd_func_params));
+					lcd_set_bmp(param.x1+2, param.y1);
+				}
 			}
 			break;
 
@@ -500,7 +534,7 @@ static void init_lcd(void) {
 	write_spi_data(0x02); // P3: 0x02 = Grayscale -> 16 (selects 12-bit color, type A)
 
 	// allow power supply to stabilize
-	lcd_delay(200);
+	lcd_delay(100);
 
 	// Turn on the display
 	write_spi_command(DISON);
@@ -576,6 +610,11 @@ static void lcd_redraw(void) {
 }
 
 static void lcd_set_pixel(int x, int y, int color) {
+	if ((x < 0) || (y < 0) || (x > 131) || (y > 131)) {
+		printk(KERN_ALERT PREFIX "Bad coordinates");
+		return;
+	}
+
 	write_spi_command(PASET);
 	write_spi_data(x);
 	write_spi_data(x);
@@ -607,6 +646,12 @@ static void lcd_set_rect(int x0, int y0, int x1, int y1, int fill, int color) {
 		xmax = (x0 > x1) ? x0 : x1;
 		ymin = (y0 <= y1) ? y0 : y1;
 		ymax = (y0 > y1) ? y0 : y1;
+
+		if ((xmin < 0) || (ymin < 0) || (xmax > 131) || (ymax > 131)) {
+			printk(KERN_ALERT PREFIX "Bad coordinates");
+			return;
+		}
+
 		// specify the controller drawing box according to those limits
 		// Row address set (command 0x2B)
 		write_spi_command(PASET);
@@ -736,6 +781,12 @@ static void lcd_put_char(char c, int x, int y, int size, int fColor) {
 	// get pointer to the last byte of the desired character
 	///pChar = pFont + (nBytes * (c - 0x1F)) + nBytes - 1;
 	pChar = pFont + (nBytes * (c - 0x1F));
+
+	if ((x < 0) || (y < 0) || (x + nRows - 1 > 131) || (y + nCols - 1 > 131)) {
+		printk(KERN_ALERT PREFIX "Bad coordinates");
+		return;
+	}
+
 	// Row address set (command 0x2B)
 	write_spi_command(PASET);
 	write_spi_data(x);
@@ -800,4 +851,104 @@ static void lcd_put_str(char *pString, int x, int y, int Size, int fColor) {
                   // bail out if y exceeds 131
                   if (y > 131) break;
          }
+}
+
+static void lcd_set_bmp(int xmin, int ymin) {
+	int color1, color2;
+	int x, y;
+	int i;
+	int xmax = xmin + bmp_x -1;
+	int ymax = ymin + bmp_y -1;
+
+	if ((xmin < 0) || (ymin < 0) || (xmax > 131) || (ymax > 131)) {
+		printk(KERN_ALERT PREFIX "Bad coordinates: %d %d %d %d", xmin, xmax, ymin, ymax);
+		return;
+	}
+
+	printk(KERN_ALERT PREFIX "BMP height: %d, width: %d, len: %d\n", bmp_x, bmp_y, bmp_x*bmp_y);
+
+	if (bmp == NULL) {
+		printk(KERN_ALERT PREFIX "Attempt wo put null BMP.\n");
+		return;
+	}
+
+	write_spi_command(PASET);
+	write_spi_data(xmin);
+	write_spi_data(xmax);
+
+	write_spi_command(CASET);
+	write_spi_data(ymin);
+	write_spi_data(ymax);
+
+	write_spi_command(RAMWR);
+
+	i = 0;
+	if ((ymax-ymin)%2 == 1) {
+		for (x = xmin; x <= xmax; x++) {
+			for (y = ymin; y <= ymax; y=y+2) {
+				color1 = bmp[i++];
+				color2 = bmp[i++];
+				write_spi_data((color1 >> 4) & 0xFF);
+				image[x][y] = color1;
+				write_spi_data(((color1 & 0xF) << 4) | ((color2 >> 8) & 0xF));
+				image[x][y + 1] = color2;
+				write_spi_data(color2 & 0xFF);
+			}
+		}
+	}
+	else {
+//		for (x = xmin; x <= xmax; x++) {
+//			for (y = ymin; y < ymax; y=y+2) {
+//				color1 = bmp[i++];
+//				color2 = bmp[i++];
+//				write_spi_data((color1 >> 4) & 0xFF);
+//				image[x][y] = color1;
+//				write_spi_data(((color1 & 0xF) << 4) | ((color2 >> 8) & 0xF));
+//				image[x][y + 1] = color2;
+//				write_spi_data(color2 & 0xFF);
+//			}
+//			if ((x-xmin)%2 == 0){
+//				color1 = bmp[i++];
+//				color2 = bmp[i++];
+//				write_spi_data((color1 >> 4) & 0xFF);
+//				write_spi_data(((color1 & 0xF) << 4) | ((color2 >> 8) & 0xF));
+//				write_spi_data(color2 & 0xFF);
+//			}
+//			image[x][ymax] = color;
+//		}
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+//
+//	for (x = xmin; x < xmin+bmp_x; x++) {
+//		for (y = ymin; y < ymax; y=y+2) {
+//			color1 = bmp[i++];
+//			color2 = bmp[i++];
+//			write_spi_data((color >> 4) & 0xFF);
+//			image[x][y] = color;
+//			write_spi_data(((color & 0xF) << 4) | ((color >> 8) & 0xF));
+//			image[x][y + 1] = color;
+//			write_spi_data(color & 0xFF);
+//		}
+//	}
+//
+//	for (i = 0; i < bmp_x*bmp_y; i=i+2) {
+//		color1 = bmp[i];
+//		color2 = bmp[i+1];
+//		write_spi_data((color1 >> 4) & 0xFF);
+//		write_spi_data(((color1 & 0xF) << 4) | ((color2 >> 8) & 0xF));
+//		write_spi_data(color2 & 0xFF);
+//	}
+
+	write_spi_command(NOP);
 }

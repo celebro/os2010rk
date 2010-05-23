@@ -72,6 +72,7 @@ static void lcd_set_rect(int x0, int y0, int x1, int y1, int fill, int color);
 static void lcd_set_line (int x0, int y0, int x1, int y1, int color);
 static void lcd_put_char (char c, int x, int y, int size, int color);
 static void lcd_put_str(char *pString, int x, int y, int size, int color);
+static void lcd_set_bmp(int x, int y);
 
 static void lcd_redraw(void);
 
