@@ -5,8 +5,8 @@
  *      Author: Jure
  */
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
 
@@ -53,22 +53,10 @@ void write_to_file(struct display* display) {
 		return;
 	}
 
-//	for (i = 0; i < display->tx_index; i++) {
-//		printf("%d\n", display->tx_data[i]);
-//	}
-//	printf("\n");
-
 	/* Send local buffer to char device */
 	write(display->file, display->tx_data, display->tx_index);
 	/* Set buffer empty */
 	display->tx_index = 0;
-
-//	/* Need 9 bits per command, don't send only one byte*/
-//	if (display->tx_index < 2) {
-//		printf("ERROR: Writing half command-> WriteInFile\n");
-//		return;
-//	}
-
 }
 
 void lcd_set_pixel(int x, int y, int color, struct display* display) {
@@ -140,6 +128,125 @@ void lcd_put_str(char *str, int x, int y, int size, int color, struct display *d
 	display->tx_index += length+1;
 	display->tx_data[display->tx_index] = '\n';
 
+	write_to_file(display);
+}
+
+
+void lcd_load_bmp(char *file_name, struct display* display) {
+	FILE *file = NULL; //our file pointer
+
+	struct bmpfile_magic	bmp_magic;
+	struct bmpfile_header	bmp_header;
+	struct bmpfile_info		bmp_info;
+
+	unsigned char *bitmap_image = NULL;
+	unsigned int *bmp = NULL;
+	int i = 0,j;
+	int x, y;
+	unsigned int tempR, tempG, tempB;
+	struct lcd_func_params param;
+
+
+	//open filename in read binary mode
+	file = fopen(file_name, "rb");
+	if (file == NULL) {
+		printf("Error: Failed to open bitmap file\n");
+		return;
+	}
+
+	/* Read magic number */
+	fread(&bmp_magic, sizeof(struct bmpfile_magic), 1, file);
+	/* Read the bitmap file header */
+	fread(&bmp_header, sizeof(struct bmpfile_header), 1, file);
+
+	/* Verify magic number */
+	if ((bmp_magic.magic[0] !=0x42) || (bmp_magic.magic[1] != 0x4D)) {
+		printf("Error: Invalid bitmap: %x,%x\n",bmp_magic.magic[0],bmp_magic.magic[1]);
+		fclose(file);
+		return;
+	}
+
+	/* Read the bitmap info header */
+	fread(&bmp_info, sizeof(struct bmpfile_info), 1, file);
+
+	if (bmp_info.bitspp != 0x18) {
+		printf("Error: Can only read 24bit bmp\n");
+		free(bitmap_image);
+		fclose(file);
+		return;
+	}
+
+	/* Move to begging of bitmap data */
+	fseek(file, bmp_header.bmp_offset, SEEK_SET);
+
+	//allocate enough memory for the bitmap image data
+	bitmap_image = (unsigned char*) malloc(bmp_info.bmp_bytesz);
+
+	if (!bitmap_image)
+	{
+		printf("Error: Failed to allocate memmory for bitmap\n");
+		free(bitmap_image);
+		fclose(file);
+		return;
+	}
+	/* Read in the bitmap data */
+	fread(bitmap_image, bmp_info.bmp_bytesz, 1, file);
+
+	/* Bmp in 12 bits for lcd */
+	bmp = (unsigned int*) malloc(bmp_info.height*bmp_info.width*sizeof(unsigned int));
+	if (!bmp)
+	{
+		printf("Error: Failed to allocate memmory for new bmp\n");
+		free(bitmap_image);
+		fclose(file);
+		return;
+	}
+
+	i = 0;
+	j = 0;
+
+	for (x = 0; x < bmp_info.height; x++) {
+		for (y = 0; y < bmp_info.width; y++) {
+			tempB = bitmap_image[i++] >> 4;
+			tempG = bitmap_image[i++] >> 4;
+			tempR = bitmap_image[i++] >> 4;
+
+			bmp[j++] = ((tempR << 8) & 0x0F00) | ((tempG << 4) & 0x00F0) | ((tempB) & 0x000F);
+		}
+
+		i += bmp_info.width % 4;
+	}
+
+	param.x1 = bmp_info.height;
+	param.y1 = bmp_info.width;
+	param.bmp = bmp;
+
+	/* Set data type */
+	display->tx_data[display->tx_index++] = LCD_LOAD_BMP;
+	/* Copy parameters */
+	memcpy(&(display->tx_data[display->tx_index]), &param, sizeof(struct lcd_func_params));
+	display->tx_index += sizeof(struct lcd_func_params);
+
+	write_to_file(display);
+
+	free(bmp);
+	free(bitmap_image);
+}
+
+void lcd_set_bmp(int x, int y, struct display * display) {
+	struct lcd_func_params param;
+	param.x1 = x;
+	param.y1 = y;
+	printf("1\n");
+	/* Set data type */
+	display->tx_data[display->tx_index++] = LCD_SET_BMP;
+	printf("2\n");
+	/* Copy parameters */
+	memcpy(&(display->tx_data[display->tx_index]), &param, sizeof(struct lcd_func_params));
+	printf("3\n");
+	display->tx_index += sizeof(struct lcd_func_params);
+
+	printf("4\n");
 	write_to_file(display);
 }
 

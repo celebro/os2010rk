@@ -21,16 +21,19 @@ int main(){
 		return -1;
 	}
 
+	//lcd_load_bmp("blani.bmp", display);
+	lcd_load_bmp("blani.bmp", display);
 	getc(stdin);
+	lcd_set_bmp(0,0,display);
 
 //	printf("Lcd rect\n");
-//	lcd_set_rect(20, 20, 50, 50, FILL, WHITE, display);
+//	lcd_set_rect(20, 20, 50, 50, NOFILL, WHITE, display);
 //	getc(stdin);
-//	lcd_set_rect(20, 60, 50, 90, FILL, RED, display);
+//	lcd_set_rect(20, 60, 50, 90, NOFILL, RED, display);
 //	getc(stdin);
-//	lcd_set_rect(60, 20, 90, 50, FILL, BLUE, display);
+//	lcd_set_rect(60, 20, 90, 50, NOFILL, BLUE, display);
 //	getc(stdin);
-//	lcd_set_rect(60, 60, 90, 90, FILL, ORANGE, display);
+//	lcd_set_rect(60, 60, 90, 90, NOFILL, ORANGE, display);
 
 //	printf("Lcd pixel\n");
 //	lcd_set_pixel(100, 100, WHITE, display);
@@ -43,9 +46,9 @@ int main(){
 
 	lcd_put_str("Test str 1\n", 10, 10, SMALL, YELLOW, display);
 	getc(stdin);
-	lcd_put_str("Test str 1\n", 30, 10, MEDIUM, GREEN, display);
+	lcd_put_str("Test str 2\n", 30, 10, MEDIUM, GREEN, display);
 	getc(stdin);
-	lcd_put_str("Test str 1\n", 50, 10, LARGE, ORANGE, display);
+	lcd_put_str("Test str 3\n", 50, 10, LARGE, ORANGE, display);
 	getc(stdin);
 
 	printf("Release display\n");
