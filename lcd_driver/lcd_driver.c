@@ -29,7 +29,7 @@ static struct file_operations lcd_fops = {
 };
 
 /* Testing parameters */
-unsigned int vol = 32;
+unsigned int vol = 50;
 unsigned int res = 3;
 unsigned int col = YELLOW;
 unsigned int temp = 0;
@@ -37,6 +37,8 @@ module_param(vol, uint, S_IRUGO);
 module_param(res, uint, S_IRUGO);
 module_param(col, uint, S_IRUGO);
 module_param(temp, uint, S_IRUGO);
+
+unsigned int image[132][132];
 
 
 ////TODO
@@ -199,7 +201,7 @@ static ssize_t lcd_write(struct file *file, const char __user *buffer, size_t le
 			printk(KERN_ALERT PREFIX "Set rect.\n");
 			if (length-1 >= sizeof(struct lcd_func_params)) {
 				copy_from_user(&param, buffer+1, sizeof(struct lcd_func_params));
-				lcd_set_rect(param.x1, param.y1, param.x2, param.y2, param.fill, param.color);
+				lcd_set_rect(param.x1+2, param.y1, param.x2, param.y2, param.fill, param.color);
 			}
 			break;
 
@@ -207,7 +209,7 @@ static ssize_t lcd_write(struct file *file, const char __user *buffer, size_t le
 			printk(KERN_ALERT PREFIX "Set line.\n");
 			if (length-1 >= sizeof(struct lcd_func_params)) {
 				copy_from_user(&param, buffer+1, sizeof(struct lcd_func_params));
-				lcd_set_line(param.x1, param.y1, param.x2, param.y2, param.color);
+				lcd_set_line(param.x1+2, param.y1, param.x2, param.y2, param.color);
 			}
 			break;
 
@@ -220,23 +222,28 @@ static ssize_t lcd_write(struct file *file, const char __user *buffer, size_t le
 					str_len = param.t_len;
 				copy_from_user(&str, buffer+1+sizeof(struct lcd_func_params), param.t_len);
 				str[LCD_MAX_STR_LEN-1] = '\n';
-				lcd_put_str(str, param.x1, param.y1, param.t_size, param.color, BLACK);
+				lcd_put_str(str, param.x1+2, param.y1, param.t_size, param.color);
 			}
 			break;
 
-		case '0': lcd_set_rect(2, 0, 131, 129, FILL, WHITE); break;
-		case '1': lcd_set_rect(2, 0, 131, 129, FILL, BLACK); break;
-		case '2': lcd_set_rect(2, 0, 131, 129, FILL, RED); break;
-		case '3': lcd_set_rect(2, 0, 131, 129, FILL, GREEN); break;
-		case '4': lcd_set_rect(2, 0, 131, 129, FILL, BLUE); break;
-		case '5': lcd_set_rect(2, 0, 131, 129, FILL, CYAN); break;
-		case '6': lcd_set_rect(2, 0, 131, 129, FILL, BROWN); break;
-		case '7': lcd_set_rect(2, 0, 131, 129, FILL, ORANGE); break;
-		case '8': lcd_set_rect(2, 0, 131, 129, FILL, PINK); break;
+		case '0': lcd_set_rect(50, 50, 100, 100, FILL, WHITE); break;
+		case '1': lcd_set_rect(50, 50, 100, 100, FILL, BLACK); break;
+		case '2': lcd_set_rect(50, 50, 100, 100, FILL, RED); break;
+		case '3': lcd_set_rect(50, 50, 100, 100, FILL, GREEN); break;
+		case '4': lcd_set_rect(50, 50, 100, 100, FILL, BLUE); break;
+		case '5': lcd_set_rect(50, 50, 100, 100, FILL, CYAN); break;
+		case '6': lcd_set_rect(50, 50, 100, 100, FILL, BROWN); break;
+		case '7': lcd_set_rect(70, 70, 100, 100, FILL, ORANGE); break;
+		case '8': //lcd_set_rect(50, 50, 100, 100, FILL, PINK); break;
+			lcd_redraw();
+			lcd_set_rect(30, 0, 65, 100, FILL, YELLOW);
+			break;
 		case '9':
-			lcd_put_char('E', 10, 10, 0, RED, GREEN);
-			lcd_put_char('B', 10, 20, 0, RED, GREEN);
-			lcd_put_char('M', 10, 30, 0, RED, GREEN);
+			lcd_set_rect(2, 0, 100, 100, FILL, PINK);
+			lcd_set_rect(10, 0, 20, 23, FILL, YELLOW);
+			lcd_put_char('E', 10, 10, 2, RED);
+			lcd_put_char('B', 10, 20, 2, RED);
+			lcd_put_char('M', 10, 30, 2, RED);
 			//lcd_put_str("Test string\n", 30, 10, SMALL, YELLOW, BLACK);
 			//lcd_put_str("Test string\n", 45, 10, MEDIUM, YELLOW, BLACK);
 			//lcd_put_str("Test string\n", 60, 10, LARGE, YELLOW, BLACK);
@@ -245,78 +252,6 @@ static ssize_t lcd_write(struct file *file, const char __user *buffer, size_t le
 	}
 
 	return length;
-
-//	char type = 0;
-//	char data = 0;
-//	int i;
-//
-//	printk(KERN_ALERT PREFIX "Write, length=%d.\n",length);
-//
-//	if (length > BUF_SIZE) {
-//		length = BUF_SIZE;
-//	}
-//
-//	if (length % 2 == 1)
-//		length--;
-//
-//	if (copy_from_user(buf, buffer, length)) {
-//		return -EFAULT;
-//	}
-//
-//	for (i = 0; i < length; ) {
-////		get_user(type, buffer+i);
-////		i++;
-////		get_user(data,buffer+i);
-//
-//		type = buf[i++];
-//		data = buf[i++];
-//
-//		//printk(KERN_ALERT PREFIX "Type = %d; data = %d\n", type, data);
-//
-//		if (type == 1)
-//			write_spi_data(data);
-//		else if (type == 0) {
-//			if ((data == PASET) || (data == CASET) || (data == RAMWR)) {
-//				write_spi_command(data);
-//			}
-//		}
-//	}
-//
-//	return length;
-
-//	unsigned char input;
-//	int i;
-//
-//	for (i = 0; i < length; i++) {
-//		get_user(input, buffer+i);
-//		printk(KERN_ALERT PREFIX "Write: %i\n", (int)input);
-//	}
-//
-//	if (length > 0) {
-//		get_user(input, buffer);
-//	}
-//	else {
-//		return 0;
-//	}
-//
-//	switch (input) {
-//		case '0': LCDSetRect(2, 0, 131, 129, BLACK); break;
-//		case '1': LCDSetRect(2, 0, 131, 129, BLACK); break;
-//		case '2': LCDSetRect(2, 0, 131, 129, RED); break;
-//		case '3': LCDSetRect(2, 0, 131, 129, GREEN); break;
-//		case '4': LCDSetRect(2, 0, 131, 129, BLUE); break;
-//		case '5': LCDSetRect(2, 0, 131, 129, CYAN); break;
-//		case '6': LCDSetRect(2, 0, 131, 129, BROWN); break;
-//		case '7': LCDSetRect(2, 0, 131, 129, ORANGE); break;
-//		case '8': LCDSetRect(2, 0, 131, 129, PINK); break;
-//		case '9': LCDSetRect(2, 0, 131, 129, YELLOW); break;
-//		case '0': LCDSetRect(3, 1, 20, 4, RED); break;
-//		case '1': LCDSetRect(2, 0, 20, 4, BLUE); break;
-//		case '2': LCDSetRect(3, 1, 130, 128, RED); break;
-//		case '3': LCDSetRect(2, 0, 131, 129, BLUE); break;
-//	}
-//
-//	return length;
 }
 
 static int lcd_ioctl(struct inode *inode,
@@ -518,7 +453,6 @@ static void lcd_delay(int n)
 //}
 
 static void init_lcd(void) {
-	int i;
 	// Hardware reset
 	pPIOB->PIO_CODR = LCD_RESET;
 	lcd_delay(10);
@@ -544,8 +478,8 @@ static void init_lcd(void) {
 
 	// Voltage control (contrast setting)
 	write_spi_command(VOLCTR);
-	write_spi_data(62); // P1 = 32 volume value (experiment with this value to get the best contrast)
-	write_spi_data(3);    // P2 = 3    resistance ratio (only value that works)
+	write_spi_data(vol); // P1 = 32 volume value (experiment with this value to get the best contrast)
+	write_spi_data(res);    // P2 = 3    resistance ratio (only value that works)
 
 	//TODO temperature
 	write_spi_command(TMPGRD);
@@ -568,26 +502,13 @@ static void init_lcd(void) {
 	// allow power supply to stabilize
 	lcd_delay(200);
 
-	/* Single color backfill */
-	write_spi_command(PASET);
-	write_spi_data(2);
-	write_spi_data(131);
-
-	write_spi_command(CASET);
-	write_spi_data(0);
-	write_spi_data(129);
-
-	write_spi_command(RAMWR);
-
-	for (i = 0; i < 130*130/2; i++) {
-		write_spi_data(0x00);
-		write_spi_data(0x00);
-		write_spi_data(0x00);
-	}
-	write_spi_command(NOP);
-
 	// Turn on the display
 	write_spi_command(DISON);
+
+	lcd_delay(20);
+
+	/* Single color backfill */
+	lcd_set_rect(2,0,131,129,FILL,BLACK);
 }
 
 static void sleep_lcd() {
@@ -627,6 +548,33 @@ static void wake_lcd() {\
 	write_spi_command(DISON);
 }
 
+static void lcd_redraw(void) {
+	int x,y;
+	int c1, c2;
+
+	write_spi_command(PASET);
+	write_spi_data(2);
+	write_spi_data(131);
+
+	write_spi_command(CASET);
+	write_spi_data(0);
+	write_spi_data(129);
+
+	write_spi_command(RAMWR);
+
+	for (x = 2; x < 132; x++) {
+		for (y = 0; y < 130; y=y+2) {
+			c1 = image[x][y];
+			write_spi_data((c1 >> 4) & 0xFF);
+			c2 = image[x][y+1];
+			write_spi_data(((c1 & 0xF) << 4) | ((c2 >> 8) & 0xF));
+			write_spi_data(c2 & 0xFF);
+		}
+	}
+
+	write_spi_command(NOP);
+}
+
 static void lcd_set_pixel(int x, int y, int color) {
 	write_spi_command(PASET);
 	write_spi_data(x);
@@ -643,11 +591,14 @@ static void lcd_set_pixel(int x, int y, int color) {
 	write_spi_data(color & 0xFF);
 
 	write_spi_command(NOP);
+
+	image[x][y] = color;
 }
 
 static void lcd_set_rect(int x0, int y0, int x1, int y1, int fill, int color) {
-	int      xmin, xmax, ymin, ymax;
-	int  i;
+	int xmin, xmax, ymin, ymax;
+	//int i;
+	int x,y;
 	if (fill == FILL) {
 		// best way to create a filled rectangle is to define a drawing box
 		// and loop two pixels at a time
@@ -668,18 +619,47 @@ static void lcd_set_rect(int x0, int y0, int x1, int y1, int fill, int color) {
 		// WRITE MEMORY
 		write_spi_command(RAMWR);
 		// loop on total number of pixels / 2
-		for (i = 0; i < ((((xmax - xmin + 1) * (ymax - ymin + 1)) / 2)+1); i++) {
-			   // use the color value to output three data bytes covering two pixels
-			   write_spi_data((color >> 4) & 0xFF);
-			   write_spi_data(((color & 0xF) << 4) | ((color >> 8) & 0xF));
-			   write_spi_data(color & 0xFF);
+//		for (i = 0; i < ((((xmax - xmin + 1) * (ymax - ymin + 1)) / 2) + 1); i++) {
+//			// use the color value to output three data bytes covering two pixels
+//			write_spi_data((color >> 4) & 0xFF);
+//			write_spi_data(((color & 0xF) << 4) | ((color >> 8) & 0xF));
+//			write_spi_data(color & 0xFF);
+//		}
+		if ((ymax-ymin)%2 == 1) {
+			for (x = xmin; x <= xmax; x++) {
+				for (y = ymin; y <= ymax; y=y+2) {
+					write_spi_data((color >> 4) & 0xFF);
+					image[x][y] = color;
+					write_spi_data(((color & 0xF) << 4) | ((color >> 8) & 0xF));
+					image[x][y + 1] = color;
+					write_spi_data(color & 0xFF);
+				}
+			}
 		}
-	}
-	else {
-        lcd_set_line(x0, y0, x1,  y0, color);
-        lcd_set_line(x0, y1, x1,  y1, color);
-        lcd_set_line(x0, y0, x0,  y1, color);
-        lcd_set_line(x1, y0, x1,  y1, color);
+		else {
+			for (x = xmin; x <= xmax; x++) {
+				for (y = ymin; y < ymax; y=y+2) {
+					write_spi_data((color >> 4) & 0xFF);
+					image[x][y] = color;
+					write_spi_data(((color & 0xF) << 4) | ((color >> 8) & 0xF));
+					image[x][y + 1] = color;
+					write_spi_data(color & 0xFF);
+				}
+				if ((x-xmin)%2 == 0){
+					write_spi_data((color >> 4) & 0xFF);
+					write_spi_data(((color & 0xF) << 4) | ((color >> 8) & 0xF));
+					write_spi_data(color & 0xFF);
+				}
+				image[x][ymax] = color;
+			}
+		}
+
+
+	} else {
+		lcd_set_line(x0, y0, x1, y0, color);
+		lcd_set_line(x0, y1, x1, y1, color);
+		lcd_set_line(x0, y0, x0, y1, color);
+		lcd_set_line(x1, y0, x1, y1, color);
 	}
 
 	write_spi_command(NOP);
@@ -729,7 +709,7 @@ static void lcd_set_line (int x0, int y0, int x1, int y1, int color) {
 	}
 }
 
-static void lcd_put_char(char c, int x, int y, int size, int fColor, int bColor) {
+static void lcd_put_char(char c, int x, int y, int size, int fColor) {
 	//extern const unsigned char FONT6x8[97][8];
 	//extern const unsigned char FONT8x8[97][8];
 	//extern const unsigned char FONT8x16[97][16];
@@ -768,44 +748,48 @@ static void lcd_put_char(char c, int x, int y, int size, int fColor, int bColor)
 	write_spi_command(RAMWR);
 	// loop on each row, working backwards from the bottom to the top
 	//for (i = nRows - 1; i >= 0; i--) {
-	for (i = 0; i < nRows; i++) {
+
+	for (i = x; i < nRows + x; i++) {
 		// copy pixel row from font table and then decrement row
 		PixelRow = *pChar++;
 		// loop on each pixel in the row (left to right)
 		// Note: we do two pixels each loop
 		Mask = 0x80;
 		//Mask = 0x01;
-		for (j = 0; j < nCols; j += 2) {
+		for (j = y; j < nCols+y; j += 2) {
 		//for (j = nCols-1; j >= 0; j -= 2) {
 			// if pixel bit set, use foreground color; else use the background color
 			// now get the pixel color for two successive pixels
 			if ((PixelRow & Mask) == 0)
-				Word0 = bColor;
+				Word0 = image[i][j];
 			else
 				Word0 = fColor;
 			Mask = Mask >> 1;
 			//Mask = Mask << 1;
 			if ((PixelRow & Mask) == 0)
-				Word1 = bColor;
+				Word1 = image[i][j+1];
 			else
 				Word1 = fColor;
 			Mask = Mask >> 1;
 			//Mask = Mask << 1;
 			// use this information to output three data bytes
 			write_spi_data((Word0 >> 4) & 0xFF);
+			image[i][j] = Word0;
 			write_spi_data(((Word0 & 0xF) << 4) | ((Word1 >> 8) & 0xF));
+			image[i][j+1] = Word1;
 			write_spi_data(Word1 & 0xFF);
 		}
 	}
+
 	// terminate the Write Memory command
 	write_spi_command(NOP);
 }
 
-static void lcd_put_str(char *pString, int x, int y, int Size, int fColor, int bColor) {
+static void lcd_put_str(char *pString, int x, int y, int Size, int fColor) {
          // loop until null-terminator is seen
          while (*pString != '\n') {
                   // draw the character
-                  lcd_put_char(*pString++, x, y, Size, fColor, bColor);
+                  lcd_put_char(*pString++, x, y, Size, fColor);
                   // advance the y position
                   if (Size == SMALL)
                            y = y + 6;
