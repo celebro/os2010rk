@@ -205,7 +205,7 @@ static ssize_t lcd_write(struct file *file, const char __user *buffer, size_t le
 			printk(KERN_ALERT PREFIX "Set rect.\n");
 			if (length-1 >= sizeof(struct lcd_func_params)) {
 				copy_from_user(&param, buffer+1, sizeof(struct lcd_func_params));
-				lcd_set_rect(param.x1+2, param.y1, param.x2, param.y2, param.fill, param.color);
+				lcd_set_rect(param.x1+2, param.y1, param.x2+2, param.y2, param.fill, param.color);
 			}
 			break;
 
@@ -213,7 +213,7 @@ static ssize_t lcd_write(struct file *file, const char __user *buffer, size_t le
 			printk(KERN_ALERT PREFIX "Set line.\n");
 			if (length-1 >= sizeof(struct lcd_func_params)) {
 				copy_from_user(&param, buffer+1, sizeof(struct lcd_func_params));
-				lcd_set_line(param.x1+2, param.y1, param.x2, param.y2, param.color);
+				lcd_set_line(param.x1+2, param.y1, param.x2+2, param.y2, param.color);
 			}
 			break;
 
