@@ -32,7 +32,7 @@ struct display* get_display() {
 
 	display->tx_index = 0;
 
-	lcd_set_rect(0,0, 130, 130, FILL, BLACK, display);
+	lcd_set_rect(0,0, 129, 129, FILL, BLACK, display);
 
 	return display;
 }
@@ -237,17 +237,40 @@ void lcd_set_bmp(int x, int y, struct display * display) {
 	struct lcd_func_params param;
 	param.x1 = x;
 	param.y1 = y;
-	printf("1\n");
+
 	/* Set data type */
 	display->tx_data[display->tx_index++] = LCD_SET_BMP;
-	printf("2\n");
+
 	/* Copy parameters */
 	memcpy(&(display->tx_data[display->tx_index]), &param, sizeof(struct lcd_func_params));
-	printf("3\n");
 	display->tx_index += sizeof(struct lcd_func_params);
 
-	printf("4\n");
 	write_to_file(display);
 }
 
+void lcd_sleep(int state, struct display *display) {
+	if (state == LCD_ON) {
+		ioctl(display->file, LCD_IOCTL_SLEEP, LCD_IOCTL_ON);
+	}
+	else if (state == LCD_OFF) {
+		ioctl(display->file, LCD_IOCTL_SLEEP, LCD_IOCTL_OFF);
+	}
+}
 
+void lcd_backlight(int state, struct display *display) {
+	if (state == LCD_ON) {
+		ioctl(display->file, LCD_IOCTL_BACKLIGHT, LCD_IOCTL_ON);
+	}
+	else if (state == LCD_OFF) {
+		ioctl(display->file, LCD_IOCTL_BACKLIGHT, LCD_IOCTL_OFF);
+	}
+}
+
+void lcd_onoff(int state,  struct display *display) {
+	if (state == LCD_ON) {
+		ioctl(display->file, LCD_IOCTL_ONOFF, LCD_IOCTL_ON);
+	}
+	else if (state == LCD_OFF) {
+		ioctl(display->file, LCD_IOCTL_ONOFF, LCD_IOCTL_OFF);
+	}
+}
