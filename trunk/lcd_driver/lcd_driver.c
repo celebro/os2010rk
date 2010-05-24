@@ -1,5 +1,5 @@
 #include "lcd_driver.h"
-#include "lcd_ioctl.h"
+//#include "lcd_ioctl.h"
 #include "lcd_protocol.h"
 #include "font.h"
 

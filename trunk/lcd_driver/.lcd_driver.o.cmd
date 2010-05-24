@@ -395,7 +395,6 @@ deps_/home/celebro/celebro/programming/c/lcd_driver/lcd_driver.o := \
     $(wildcard include/config/64bit.h) \
   include/linux/err.h \
   include/linux/cdev.h \
-  /home/celebro/celebro/programming/c/lcd_driver/lcd_ioctl.h \
   /home/celebro/celebro/programming/c/lcd_driver/lcd_protocol.h \
   /home/celebro/celebro/programming/c/lcd_driver/font.h \
   /home/celebro/celebro/programming/c/lcd_driver/at91sam9260.h \
