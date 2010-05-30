@@ -225,7 +225,7 @@ static ssize_t lcd_write(struct file *file, const char __user *buffer, size_t le
 				if (str_len > param.t_len)
 					str_len = param.t_len;
 				copy_from_user(&str, buffer+1+sizeof(struct lcd_func_params), param.t_len);
-				str[LCD_MAX_STR_LEN-1] = '\n';
+				str[LCD_MAX_STR_LEN-1] = 0x00;
 				lcd_put_str(str, param.x1+2, param.y1, param.t_size, param.color);
 			}
 			break;
@@ -647,10 +647,22 @@ static void lcd_set_rect(int x0, int y0, int x1, int y1, int fill, int color) {
 		ymin = (y0 <= y1) ? y0 : y1;
 		ymax = (y0 > y1) ? y0 : y1;
 
-		if ((xmin < 0) || (ymin < 0) || (xmax > 131) || (ymax > 131)) {
-			printk(KERN_ALERT PREFIX "Bad coordinates");
+		if ((xmin > 131) || (ymin > 131) || (xmax < 0) || (ymax < 0))
 			return;
-		}
+
+		if (xmin < 0)
+			xmin = 0;
+		if (ymin < 0)
+			ymin = 0;
+		if (xmax > 131)
+			xmax = 131;
+		if (ymax > 131)
+			ymax = 131;
+
+//		if ((xmin < 0) || (ymin < 0) || (xmax > 131) || (ymax > 131)) {
+//			printk(KERN_ALERT PREFIX "Bad coordinates");
+//			return;
+//		}
 
 		// specify the controller drawing box according to those limits
 		// Row address set (command 0x2B)
@@ -838,7 +850,7 @@ static void lcd_put_char(char c, int x, int y, int size, int fColor) {
 
 static void lcd_put_str(char *pString, int x, int y, int Size, int fColor) {
          // loop until null-terminator is seen
-         while (*pString != '\n') {
+         while (*pString != 0x00) {
                   // draw the character
                   lcd_put_char(*pString++, x, y, Size, fColor);
                   // advance the y position
