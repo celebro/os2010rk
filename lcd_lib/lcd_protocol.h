@@ -32,7 +32,7 @@ struct lcd_func_params {
 	int color;
 	int t_len;
 	int t_size;
-	int *bmp;
+	unsigned int *bmp;
 };
 
 

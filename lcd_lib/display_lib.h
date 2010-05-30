@@ -8,42 +8,39 @@
 #ifndef DISPLAY_LIB_H_
 #define DISPLAY_LIB_H_
 
-#include <stdint.h>
+// 12-bit color definitions
+#define WHITE          0xFFF
+#define BLACK          0x000
+#define RED            0xF00
+#define GREEN          0x0F0
+#define BLUE           0x00F
+#define CYAN           0x0FF
+#define MAGENTA        0xF0F
+#define YELLOW         0xFF0
+#define BROWN          0xB22
+#define ORANGE         0xFA0
+#define PINK           0xF6A
 
-#define TX_MAX 256
+// Font sizes
+#define SMALL          0
+#define MEDIUM         1
+#define LARGE          2
 
+// Filled rectangle
+#define FILL	1
+#define NOFILL	0
+
+// ON OFF parameters
 #define LCD_ON	1
 #define LCD_OFF	0
+
+// Max transfer to device file
+#define TX_MAX 256
 
 struct display {
 	int file;
 	unsigned int tx_index;
 	unsigned char tx_data[TX_MAX];
-};
-
-struct bmpfile_magic {
-  unsigned char magic[2];
-};
-
-struct bmpfile_header {
-  uint32_t filesz;
-  uint16_t creator1;
-  uint16_t creator2;
-  uint32_t bmp_offset;
-};
-
-struct bmpfile_info{
-  uint32_t header_sz;
-  uint32_t width;
-  uint32_t height;
-  uint16_t nplanes;
-  uint16_t bitspp;
-  uint32_t compress_type;
-  uint32_t bmp_bytesz;
-  uint32_t hres;
-  uint32_t vres;
-  uint32_t ncolors;
-  uint32_t nimpcolors;
 };
 
 struct display* get_display();

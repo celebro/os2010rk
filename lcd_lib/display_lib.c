@@ -9,10 +9,12 @@
 #include <string.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
+#include <stdint.h>
+#include <unistd.h>
 
 #include "display_lib.h"
-#include "lcd.h"
 #include "lcd_protocol.h"
+#include "lcd_bmp.h"
 
 struct display* get_display() {
 	/* Stucture to lcd display, so there is nothing global */
@@ -46,8 +48,6 @@ void release_display(struct display* display) {
 }
 
 void write_to_file(struct display* display) {
-	int i;
-
 	if (display == NULL) {
 		printf("ERROR: Null display pointer-> WriteInFile\n");
 		return;
