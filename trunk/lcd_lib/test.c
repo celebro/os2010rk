@@ -7,7 +7,6 @@
 
 #include <stdio.h>
 #include "display_lib.h"
-#include "lcd.h"
 
 struct display* display;
 
