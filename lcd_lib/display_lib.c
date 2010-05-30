@@ -110,8 +110,10 @@ void lcd_put_str(char *str, int x, int y, int size, int color, struct display *d
 	/* Max LCD_MAX_STR_LEN characters */
 	length = strlen(str);
 
-	if (length > LCD_MAX_STR_LEN)
-		length = LCD_MAX_STR_LEN;
+	if (length > (LCD_MAX_STR_LEN-1))
+		length = LCD_MAX_STR_LEN-1;
+
+	length = length+1;
 
 	param.t_len = length;
 	param.t_size = size;
@@ -126,7 +128,7 @@ void lcd_put_str(char *str, int x, int y, int size, int color, struct display *d
 	/* Copy string */
 	memcpy(&(display->tx_data[display->tx_index]), str, length);
 	display->tx_index += length+1;
-	display->tx_data[display->tx_index] = '\n';
+	display->tx_data[display->tx_index] = 0x00;
 
 	write_to_file(display);
 }
