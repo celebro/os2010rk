@@ -206,7 +206,7 @@ void demo_rect() {
 
 		{ 40, 40, 90, 90, GREEN, FILL},
 		{ 50, 50, 80, 80, BLACK, FILL},
-		{ 30, 30, 80, 90, BROWN, FILL},
+		{ 30, 20, 100, 110, BROWN, FILL},
 		{ 10, 60, 120, 70, PINK, FILL}
 	};
 
@@ -603,6 +603,13 @@ int menu_selection(int position){
 			position--;
 			break;
 		case LEFT:
+			if (menu != 0) {
+				menu_position[menu] = position;
+				menu = 0;
+				position = menu_position[menu];
+				intro_animation();
+			}
+			break;
 		case QUIT:
 			if (menu == 0)
 				running = 0;
