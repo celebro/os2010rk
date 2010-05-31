@@ -23,10 +23,15 @@ int menu_selection(int position);
 void demo_pixel();
 void demo_line();
 void demo_rect();
-void demo_string();
-void demo_bmpfull();
-void demo_bmpsmall();
-void demo_integration();
+
+void demo_strings();
+void demo_bitmap();
+void demo_combined();
+
+void demo_backlight();
+void demo_sleep();
+void demo_off();
+
 void demo_pong();
 
 
