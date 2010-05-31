@@ -38,8 +38,21 @@ int str_color = RED;
 int str_size = LARGE;
 
 int menu = 0;
-
 int running = 1;
+
+int colors[10] = {
+	WHITE,
+	RED,
+	GREEN,
+	BLUE,
+	CYAN,
+	MAGENTA,
+	YELLOW,
+	BROWN,
+	ORANGE,
+	PINK
+};
+
 
 void restore_terminal_settings(void) {
 	tcsetattr(0, TCSANOW, &oldt); /* Apply saved settings */
@@ -99,8 +112,8 @@ void build_vars() {
 	}
 
 	menu_item[0][0] = "Basic shapes";
-	menu_item[0][1] = "Strings";
-	menu_item[0][2] = "Bitmap";
+	menu_item[0][1] = "Text & bmp";
+	menu_item[0][2] = "Ioctl";
 	menu_item[0][3] = "Pong";
 
 	menu_item[1][0] = "Pixel";
@@ -108,14 +121,14 @@ void build_vars() {
 	menu_item[1][2] = "Rect";
 	menu_item[1][3] = "";
 
-	menu_item[2][0] = "Large";
-	menu_item[2][1] = "Medium";
-	menu_item[2][2] = "Small";
+	menu_item[2][0] = "Strings";
+	menu_item[2][1] = "Bitmap";
+	menu_item[2][2] = "Combined";
 	menu_item[2][3] = "";
 
-	menu_item[3][0] = "Full screen";
-	menu_item[3][1] = "Small";
-	menu_item[3][2] = "Combined";
+	menu_item[3][0] = "Backlight";
+	menu_item[3][1] = "Sleep";
+	menu_item[3][2] = "Off";
 	menu_item[3][3] = "";
 }
 
@@ -125,30 +138,176 @@ void clear_screen() {
 
 void demo_pixel() {
 	printf("Demo pixel\n");
+	char key;
+
+	clear_screen();
+	while (1) {
+		lcd_set_pixel(rand()%130, rand()%130, colors[rand()%10], display);
+		lcd_set_pixel(rand()%130, rand()%130, colors[rand()%10], display);
+		lcd_set_pixel(rand()%130, rand()%130, colors[rand()%10], display);
+		lcd_set_pixel(rand()%130, rand()%130, colors[rand()%10], display);
+		key = get_key();
+		if (key == QUIT)
+			break;
+	}
 }
 
 void demo_line() {
 	printf("Demo line\n");
+
+	int i;
+	char key;
+
+	int coord[15][5] =
+	{
+		{ 20, 110, 110, 110, GREEN},
+		{ 20, 110, 40, 90, GREEN},
+		{ 110, 110, 90, 90, GREEN},
+		{ 40, 90, 90, 90, GREEN},
+		{ 80, 90, 80, 20, BLUE},
+		{ 80, 20, 50, 20, BLUE},
+		{ 50, 20, 50, 43, BLUE},
+		{ 47, 44, 53, 44, YELLOW},
+		{ 47, 45, 53, 45, YELLOW},
+		{ 47, 46, 53, 46, YELLOW},
+		{ 47, 47, 53, 47, YELLOW},
+		{ 50, 48, 50, 66, RED},
+		{ 40, 56, 60, 56, RED},
+		{ 50, 66, 40, 75, RED},
+		{ 50, 66, 60, 75, RED}
+	};
+
+	clear_screen();
+	for (i = 0; i < 15; i++) {
+		lcd_set_line(coord[i][1], coord[i][0], coord[i][3], coord[i][2], coord[i][4], display);
+		key = get_key();
+		if (key == QUIT)
+			return;
+	}
+
 }
 
 void demo_rect() {
 	printf("Demo rect\n");
+	int i;
+	char key;
+
+	int coord[11][6] =
+	{
+		{ 20, 20, 60, 60, WHITE, NOFILL},
+		{ 20, 70, 60, 110, RED, NOFILL},
+		{ 70, 20, 110, 60, BLUE, NOFILL},
+		{ 70, 70, 110, 110, ORANGE, NOFILL},
+
+		{ 20, 20, 60, 60, WHITE, FILL},
+		{ 20, 70, 60, 110, RED, FILL},
+		{ 70, 20, 110, 60, BLUE, FILL},
+		{ 70, 70, 110, 110, ORANGE, FILL},
+
+		{ 40, 40, 90, 90, GREEN, FILL},
+		{ 50, 50, 80, 80, BLACK, FILL},
+		{ 60, 60, 70, 70, PINK, FILL}
+	};
+
+	clear_screen();
+	for (i = 0; i < 11; i++) {
+		lcd_set_rect(coord[i][0], coord[i][1], coord[i][2], coord[i][3], coord[i][5], coord[i][4], display);
+		key = get_key();
+		if (key == QUIT)
+			return;
+	}
+
 }
 
-void demo_string() {
-	printf("Demo string\n");
+void demo_strings() {
+	printf("Demo strings\n");
+
+	clear_screen();
+	lcd_put_str("Small font", 20, 20, SMALL, YELLOW, display);
+	get_key();
+	lcd_put_str("Medium font", 45, 25, MEDIUM, CYAN, display);
+	get_key();
+	lcd_put_str("Large font", 70, 30, LARGE, MAGENTA, display);
+	get_key();
+	lcd_put_str("!@#$%^&*()_+", 90, 20, LARGE, GREEN, display);
+	get_key();
+
 }
 
-void demo_bmpfull() {
-	printf("Demo bmpfull\n");
+void demo_bitmap() {
+	printf("Demo bitmap.\n");
+
+	lcd_load_bmp("pic1.bmp", display);
+	lcd_set_bmp(0,0,display);
+
+	if (get_key() == QUIT)
+		return;
+
+	lcd_load_bmp("pic2.bmp", display);
+	lcd_set_bmp(0,0,display);
+
+	if (get_key() == QUIT)
+		return;
+
+	lcd_load_bmp("pic4.bmp", display);
+	clear_screen();
+	lcd_set_bmp(0,0,display);
+
+	if (get_key() == QUIT)
+		return;
+
+	lcd_set_bmp(40,0,display);
+
+	if (get_key() == QUIT)
+		return;
+
+	lcd_set_bmp(80,0,display);
+
+	if (get_key() == QUIT)
+		return;
+
+	lcd_load_bmp("pic3.bmp", display);
+	lcd_set_bmp(10,10,display);
+
+	if (get_key() == QUIT)
+		return;
+
+	lcd_set_bmp(70,70,display);
+
+	if (get_key() == QUIT)
+		return;
 }
 
-void demo_bmpsmall() {
-	printf("Demo bmpsmall\n");
+
+void demo_combined() {
+	printf("Demo combined\n");
+
+	clear_screen();
+	lcd_load_bmp("pic1.bmp", display);
+	lcd_set_bmp(0,0,display);
+
+	if (get_key() == QUIT)
+		return;
+
+	lcd_put_str("ARM/Linux", 30, 30, LARGE, RED, display);
+	lcd_put_str("LCD gonilnik", 50, 15, LARGE, RED, display);
+	//lcd_set_rect(0, 0, 129, 129, FILL, BLACK, display);
+	lcd_put_str("DEMO", 70, 50, LARGE, RED, display);
+
+	if (get_key() == QUIT)
+		return;
 }
 
-void demo_integration() {
-	printf("Demo intergration\n");
+void demo_backlight() {
+
+}
+
+void demo_sleep() {
+
+}
+
+void demo_off() {
+
 }
 
 void demo_pong() {
@@ -165,6 +324,8 @@ void demo_pong() {
     int paddy = 30;
     int paddx = 10;
 
+    int maxd = 4;
+
     char c;
     int active = 1;
     int alive = 1;
@@ -179,39 +340,42 @@ void demo_pong() {
 		/* Clear previous */
 		lcd_set_rect(x, y, x+size, y+size, FILL, BLACK, display);
 
-		//if (alive) {
-
-			if (x+size >= padx) {
-				if ((y+size < pady) || (y > pady+paddy)) {
-					//die
-					//usleep(1000000);
-					alive = 0;
-				}
-				else  {
-					dx = -dx;
-					x = padx - size - 1;
-					lcd_set_rect(padx, pady, padx+paddx, pady+paddy, FILL, YELLOW, display);
-				}
+		if (x+size >= padx) {
+			if ((y+size < pady) || (y > pady+paddy)) {
+				//die
+				alive = 0;
+				active = 0;
 			}
-			if (y+size >= 129) {
-				dy = -dy;
-				y = 129 - size;
-			}
-			if (x <= 0) {
+			else  {
+				if (dy <= 0) {
+					dy = -(rand() % 5);
+				}
+				else {
+					dy = rand() % 5;
+				}
 				dx = -dx;
-				x = 0;
+				x = padx - size - 1;
+				lcd_set_rect(padx, pady, padx+paddx, pady+paddy, FILL, YELLOW, display);
 			}
-			if (y <= 0) {
-				dy = -dy;
-				y = 0;
-			}
-		//}
+		}
+		if (y+size >= 129) {
+			dy = -dy;
+			y = 129 - size;
+		}
+		if (x <= 0) {
+			dx = -dx;
+			x = 0;
+		}
+		if (y <= 0) {
+			dy = -dy;
+			y = 0;
+		}
 
 		x+=dx;
 		y+=dy;
 
 		/* Draw new */
-		lcd_set_rect(x, y, x+size, y+size, FILL, RED, display);
+		lcd_set_rect(x, y, x+size, y+size, FILL, GREEN, display);
 
 		c = get_key();
 		switch (c) {
@@ -230,10 +394,35 @@ void demo_pong() {
 			active = 0;
 			break;
 		}
-
 	}
 
-	fcntl(0, F_SETFL, term_setting);
+    fcntl(0, F_SETFL, term_setting);
+
+    /* Player pressed quit */
+    if (alive) {
+    	return;
+    }
+
+    lcd_put_str("YOU LOST", 10, 10, LARGE, YELLOW, display);
+
+    active = 1;
+    while (active) {
+		/* Clear previous */
+		lcd_set_rect(x, y, x+size, y+size, FILL, BLACK, display);
+
+		if (x+size >= 129+size) {
+			active = 0;
+		}
+
+		x+=dx;
+		y+=dy;
+
+		/* Draw new */
+		lcd_set_rect(x, y, x+size, y+size, FILL, RED, display);
+	}
+
+    get_key();
+
 }
 
 /* Intro animation */
@@ -279,6 +468,7 @@ int menu_selection(int position){
 		return position;
 
 	switch (key){
+		case RIGHT:
 		case ENTER:
 			menu_position[menu] = position;
 			switch (menu) {
@@ -291,7 +481,8 @@ int menu_selection(int position){
 						intro_animation();
 					}
 					else if (position == 1) {
-						demo_string();
+						menu = 2;
+						position = menu_position[menu];
 						intro_animation();
 					}
 					else if (position == 2) {
@@ -320,23 +511,23 @@ int menu_selection(int position){
 						intro_animation();
 					}
 					break;
-				/* Strings */
+				/* Text and bitmap */
 				case 2:
-					break;
-				/* Bitmap*/
-				case 3:
 					if (position == 0) {
-						demo_bmpfull();
+						demo_strings();
 						intro_animation();
 					}
 					else if (position == 1) {
-						demo_bmpsmall();
+						demo_bitmap();
 						intro_animation();
 					}
 					else if (position == 2) {
-						demo_integration();
+						demo_combined();
 						intro_animation();
 					}
+					break;
+				/* Bitmap*/
+				case 3:
 					break;
 			}
 			break;
@@ -348,6 +539,7 @@ int menu_selection(int position){
 			switch_tab(position,position-1);
 			position--;
 			break;
+		case LEFT:
 		case QUIT:
 			if (menu == 0)
 				running = 0;
