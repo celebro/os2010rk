@@ -192,7 +192,7 @@ void demo_rect() {
 	int i;
 	char key;
 
-	int coord[11][6] =
+	int coord[12][6] =
 	{
 		{ 20, 20, 60, 60, WHITE, NOFILL},
 		{ 20, 70, 60, 110, RED, NOFILL},
@@ -206,11 +206,12 @@ void demo_rect() {
 
 		{ 40, 40, 90, 90, GREEN, FILL},
 		{ 50, 50, 80, 80, BLACK, FILL},
-		{ 60, 60, 70, 70, PINK, FILL}
+		{ 30, 30, 80, 90, BROWN, FILL},
+		{ 10, 60, 120, 70, PINK, FILL}
 	};
 
 	clear_screen();
-	for (i = 0; i < 11; i++) {
+	for (i = 0; i < 12; i++) {
 		lcd_set_rect(coord[i][0], coord[i][1], coord[i][2], coord[i][3], coord[i][5], coord[i][4], display);
 		key = get_key();
 		if (key == QUIT)
@@ -298,16 +299,66 @@ void demo_combined() {
 		return;
 }
 
-void demo_backlight() {
+//void lcd_sleep(int state, struct display *display);
+//void lcd_backlight(int state, struct display *display);
+//void lcd_onoff(int state,  struct display *display);
 
+void demo_backlight() {
+	clear_screen();
+	lcd_set_rect(0, 0, 129, 64, FILL, WHITE, display);
+
+	if (get_key() == QUIT)
+		return;
+
+	lcd_backlight(LCD_OFF, display);
+
+	if (get_key() == QUIT)
+		return;
+
+	lcd_backlight(LCD_ON, display);
+
+	if (get_key() == QUIT)
+		return;
 }
 
 void demo_sleep() {
+	clear_screen();
 
+	lcd_load_bmp("pic1.bmp", display);
+	lcd_set_bmp(0,0,display);
+
+	if (get_key() == QUIT)
+		return;
+
+	lcd_sleep(LCD_ON, display);
+
+	if (get_key() == QUIT)
+		return;
+
+	lcd_sleep(LCD_OFF, display);
+
+	if (get_key() == QUIT)
+		return;
 }
 
 void demo_off() {
+	clear_screen();
 
+	lcd_load_bmp("pic1.bmp", display);
+	lcd_set_bmp(0,0,display);
+
+	if (get_key() == QUIT)
+		return;
+
+	lcd_onoff(LCD_OFF, display);
+
+	if (get_key() == QUIT)
+		return;
+
+	lcd_onoff(LCD_ON, display);
+
+	if (get_key() == QUIT)
+		return;
 }
 
 void demo_pong() {
@@ -528,6 +579,18 @@ int menu_selection(int position){
 					break;
 				/* Bitmap*/
 				case 3:
+					if (position == 0) {
+						demo_backlight();
+						intro_animation();
+					}
+					else if (position == 1) {
+						demo_sleep();
+						intro_animation();
+					}
+					else if (position == 2) {
+						demo_off();
+						intro_animation();
+					}
 					break;
 			}
 			break;
