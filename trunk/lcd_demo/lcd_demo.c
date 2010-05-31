@@ -85,7 +85,6 @@ void intro_animation() {
 	int m3s = 55;
 
 	/* TODO a nice bmp */
-
 	for (i = -m0s; i <= 0; i = i+step) {
 		lcd_set_rect(m0, i, m0 + menu_size, i+m0s, FILL, color, display);
 		lcd_put_str("Menu 0", m0+str_vspace, i+str_hspace, str_size, str_color, display);
@@ -107,6 +106,56 @@ void intro_animation() {
 	}
 }
 
+void switch_tab(int previous, int current){
+	int menu_size = 18;
+	int spacing = 15;
+	int str_vspace = 2;
+	int str_hspace = 4;
+	int color = ORANGE;
+	int str_color = RED;
+	int str_size = LARGE;
+
+	int mx = 7 + (3 - previous) * 33;		//draw previously selected tab
+	int mxs = 100 - (previous * 15);
+
+	lcd_set_rect(mx, 0, mx + menu_size, mxs, FILL, color, display);
+	lcd_put_str("Menu X", mx+str_vspace, str_hspace, str_size, str_color, display);
+
+	mx = 7 + (3 - current) * 33;			//draw currently selected tab
+	mxs = 100 - (current * 15);
+
+	color = RED;
+	str_color = ORANGE;
+
+	lcd_set_rect(mx, 0, mx + menu_size, mxs, FILL, color, display);
+	lcd_put_str("Menu X", mx+str_vspace, str_hspace, str_size, str_color, display);
+
+}
+
+int menu_selection(char key, int position){
+	int menu_size = 3;
+
+	if((key == DOWN) && position==menu_size)	//end is reached, return current position
+		return position;
+	if((key == UP)&& position == 0)
+		return position;
+
+	switch (key){
+		case ENTER:
+			/* TODO select current menu*/
+		case DOWN:
+			switch_tab(position,position+1);
+			position++;
+		case UP:
+			switch_tab(position,position-1);
+			position--;
+		default:
+			break;
+	}
+
+	return position;
+}
+
 int main(){
 
 	display = get_display();
@@ -119,7 +168,13 @@ int main(){
 
 	intro_animation();
 
-	/* TODO loop */
+	char key = 0;
+	int position = 0;
+
+	while((key = get_char)!= QUIT){
+		position = menu_selection(key,position);
+	}
+
 
 	restore_terminal_settings();
 	release_display(display);
